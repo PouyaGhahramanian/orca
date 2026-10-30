@@ -91,6 +91,17 @@ describe('detectCsvDelimiter', () => {
     ])
   })
 
+  it('sniffs pipe exports whose values contain commas, semicolons and quoted pipes', () => {
+    const content = 'id|label|amount\n1|"Roe | John"|1,50\n2|tea;milk|2,75\n'
+
+    expect(detectCsvDelimiter('export.csv', content)).toBe('|')
+    expect(parseCsv(content, detectCsvDelimiter('export.csv', content)).rows).toEqual([
+      ['id', 'label', 'amount'],
+      ['1', 'Roe | John', '1,50'],
+      ['2', 'tea;milk', '2,75']
+    ])
+  })
+
   it('keeps comma when semicolons only appear inside quoted fields', () => {
     expect(detectCsvDelimiter('x.csv', '"a"";b;c",d,e\n1,2,3\n')).toBe(',')
   })
@@ -108,6 +119,10 @@ describe('detectCsvDelimiter', () => {
     ['a;b,c\td', ','],
     ['a;b\tc', '\t'],
     ['a,b\tc', ','],
+    ['a|b,c', ','],
+    ['a|b;c', ';'],
+    ['a|b\tc', '\t'],
+    ['"a|b|c",d', ','],
     ['', ','],
     ['single', ',']
   ])('preserves existing delimiter precedence for %j', (content, delimiter) => {
@@ -154,6 +169,11 @@ describe('detectCsvDelimiter', () => {
 
   it('keeps consistent tab columns when a header contains extra semicolons', () => {
     expect(detectCsvDelimiter('x.csv', 'notes;one;two\tvalue\nplain\t1')).toBe('\t')
+  })
+
+  it('keeps consistent comma and semicolon columns when only the header has extra pipes', () => {
+    expect(detectCsvDelimiter('x.csv', 'notes|one|two,value\nplain,1\nother,2')).toBe(',')
+    expect(detectCsvDelimiter('x.csv', 'notes|one|two;value\nplain;1\nother;2')).toBe(';')
   })
 
   it('keeps a semicolon export whose unquoted comma counts vary between rows', () => {

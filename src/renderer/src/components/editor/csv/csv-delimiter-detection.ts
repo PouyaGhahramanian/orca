@@ -17,29 +17,43 @@ export function detectCsvDelimiter(filePath: string, content: string): string {
   const tabs = countDelimiterOutsideQuotes(firstLine, '\t')
   const semicolons = countDelimiterOutsideQuotes(firstLine, ';')
   const commas = countDelimiterOutsideQuotes(firstLine, ',')
-  // Keep the existing comma/tab choice unless semicolon strictly wins.
-  const existingDelimiter = tabs > commas ? '\t' : ','
-  if (semicolons > commas && semicolons > tabs) {
-    return hasConsistentExistingCsvColumns(text, existingDelimiter) ? existingDelimiter : ';'
+  const pipes = countDelimiterOutsideQuotes(firstLine, '|')
+  // Keep the existing comma/tab choice unless semicolon, then pipe, strictly wins.
+  let delimiter = tabs > commas ? '\t' : ','
+  if (
+    semicolons > Math.max(commas, tabs) &&
+    !hasConsistentExistingCsvColumns(text, delimiter, ';')
+  ) {
+    delimiter = ';'
   }
-  return existingDelimiter
+  if (
+    pipes > Math.max(commas, tabs, semicolons) &&
+    !hasConsistentExistingCsvColumns(text, delimiter, '|')
+  ) {
+    delimiter = '|'
+  }
+  return delimiter
 }
 
-// Header punctuation should not replace an otherwise consistent comma/tab table.
-function hasConsistentExistingCsvColumns(text: string, delimiter: string): boolean {
+// Header punctuation should not replace an otherwise consistent table.
+function hasConsistentExistingCsvColumns(
+  text: string,
+  delimiter: string,
+  challenger: string
+): boolean {
   const scanLength = Math.min(text.length, CSV_DELIMITER_SNIFF_SCAN_CODE_UNITS)
-  const records: { delimiters: number; semicolons: number }[] = []
+  const records: { delimiters: number; challengers: number }[] = []
   let delimiters = 0
-  let semicolons = 0
+  let challengers = 0
   let inQuotes = false
   let fieldIsEmpty = true
   let hasContent = false
   const pushRecord = (): void => {
     if (hasContent) {
-      records.push({ delimiters, semicolons })
+      records.push({ delimiters, challengers })
     }
     delimiters = 0
-    semicolons = 0
+    challengers = 0
     fieldIsEmpty = true
     hasContent = false
   }
@@ -77,8 +91,8 @@ function hasConsistentExistingCsvColumns(text: string, delimiter: string): boole
     } else {
       fieldIsEmpty = false
     }
-    if (ch === ';') {
-      semicolons += 1
+    if (ch === challenger) {
+      challengers += 1
     }
     hasContent ||= !isCsvSniffWhitespace(text.charCodeAt(index))
   }
@@ -91,7 +105,7 @@ function hasConsistentExistingCsvColumns(text: string, delimiter: string): boole
     first.delimiters > 0 &&
     records.length > 1 &&
     records.every((record) => record.delimiters === first.delimiters) &&
-    records.some((record) => record.semicolons !== first.semicolons)
+    records.some((record) => record.challengers !== first.challengers)
   )
 }
 

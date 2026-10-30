@@ -16119,6 +16119,7 @@
           "delimiterComma": "Comma",
           "delimiterSemicolon": "Semicolon",
           "delimiterTab": "Tab",
+          "delimiterPipe": "Pipe",
           "delimiterAuto": "Auto ({{delimiter}})",
           "delimiter": "Delimiter",
           "rowCount_one": "{{formatted}} row",
