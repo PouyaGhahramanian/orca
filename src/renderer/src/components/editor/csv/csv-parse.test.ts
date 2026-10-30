@@ -123,6 +123,7 @@ describe('detectCsvDelimiter', () => {
     ['a|b;c', ';'],
     ['a|b\tc', '\t'],
     ['"a|b|c",d', ','],
+    ['x,"a|b|c"', ','],
     ['', ','],
     ['single', ',']
   ])('preserves existing delimiter precedence for %j', (content, delimiter) => {
@@ -166,6 +167,19 @@ describe('detectCsvDelimiter', () => {
       ['plain', '2']
     ])
   })
+
+  it.each(['|', ';'])(
+    'keeps a literal quote on the first line from hiding later %j separators',
+    (separator) => {
+      const content = `item, variant${separator}6" bolt${separator}price\nx${separator}y${separator}z`
+
+      expect(detectCsvDelimiter('x.csv', content)).toBe(separator)
+      expect(parseCsv(content, detectCsvDelimiter('x.csv', content)).rows).toEqual([
+        ['item, variant', '6" bolt', 'price'],
+        ['x', 'y', 'z']
+      ])
+    }
+  )
 
   it('keeps consistent tab columns when a header contains extra semicolons', () => {
     expect(detectCsvDelimiter('x.csv', 'notes;one;two\tvalue\nplain\t1')).toBe('\t')

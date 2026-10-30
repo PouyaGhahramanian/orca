@@ -2,6 +2,7 @@ export const CSV_DELIMITER_SNIFF_SCAN_CODE_UNITS = 64 * 1024
 
 const LINE_FEED_CODE_UNIT = 10
 const CARRIAGE_RETURN_CODE_UNIT = 13
+const CANDIDATE_DELIMITERS = ',;\t|'
 
 export function detectCsvDelimiter(filePath: string, content: string): string {
   if (filePath.toLowerCase().endsWith('.tsv')) {
@@ -155,11 +156,14 @@ function countDelimiterOutsideQuotes(line: string, delimiter: string): number {
   let inQuotes = false
   for (let i = 0; i < line.length; i += 1) {
     const ch = line[i]
+    // Like the parser, only a field-start quote opens one; any candidate may end the prior field.
     if (ch === '"') {
       if (inQuotes && line[i + 1] === '"') {
         i += 1
-      } else {
-        inQuotes = !inQuotes
+      } else if (inQuotes) {
+        inQuotes = false
+      } else if (i === 0 || CANDIDATE_DELIMITERS.includes(line[i - 1])) {
+        inQuotes = true
       }
       continue
     }
